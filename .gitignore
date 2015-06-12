@@ -62,3 +62,17 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+ExportedObj/
+*.svd
+*.userprefs
+*.csproj
+*.pidb
+*.suo
+*.sln
+*.user
+*.unityproj
+*.booproj
