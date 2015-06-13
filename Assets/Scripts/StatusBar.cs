@@ -16,13 +16,8 @@ public class StatusBar : MonoBehaviour {
 
         currentHeight = _value * ratio;
 
-        print("CURRENT: " + currentHeight + " - MAX: " + maxHeight);
         if (currentHeight >= maxHeight) currentHeight = maxHeight;
 
         GetComponent<RectTransform>().localScale = new Vector2(GetComponent<RectTransform>().localScale.x, currentHeight);
-
-
-       
-
     }
 }

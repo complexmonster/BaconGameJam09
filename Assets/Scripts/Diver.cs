@@ -6,7 +6,11 @@ public class Diver : MonoBehaviour {
     public float startDepth;
     public float nitrogen = 0;
     public float weight = 0;
+    public float swimPower = 200f;
+    public int floatBags = 1;
+
     private float currentDepth;
+
 
     private float timeStart = 0f;
     private float timeDiveTotal = 0f;
@@ -42,13 +46,13 @@ public class Diver : MonoBehaviour {
 
     void FixedUpdate()
     {
-        angle = 0f;
+        if (GetComponent<Rigidbody2D>().velocity.y < 0f) angle = 0f;
 
         if (Input.GetKey(KeyCode.W))
         {
             degree += 50f;
             angle = 180f;
-            GetComponent<Rigidbody2D>().AddForce(new Vector2(0, Time.deltaTime * 100), ForceMode2D.Force);
+            GetComponent<Rigidbody2D>().AddForce(new Vector2(0, Time.deltaTime * swimPower), ForceMode2D.Force);
 
             if (Input.GetKey(KeyCode.A))
             {
