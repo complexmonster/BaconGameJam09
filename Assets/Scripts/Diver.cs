@@ -1,12 +1,16 @@
 using UnityEngine;
 using System.Collections;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 public class Diver : MonoBehaviour {
 
     public static Diver diver;
+    private SaveFile save = new SaveFile();
 
     public float startDepth;
     public float nitrogen = 0;
+    public float nitrogenProduction = 1.0f;
     public float energy = 100;
     public float maxEnergy = 100;
     public float energyConsumption = 10f;
@@ -19,25 +23,28 @@ public class Diver : MonoBehaviour {
     private float currentDepth;
 
     private float timeStart = 0f;
-    private float timeDiveTotal = 0f;
+    //private float timeDiveTotal = 0f;
 
     private bool readyForTreasure = false;
 
     public UnityEngine.UI.Text depthText, cashText;
     public UnityEngine.UI.Image weightBar, nitrogenBar;
-    public GameObject bagPrefab, interactUI;
+    public GameObject bagPrefab, interactUI, bagsUI, bagIcon;
 
     private float degree, angle;
 
     void Awake ()
     {
         if (diver == null) diver = this;
+
+        LoadUpgrades();
+
+        startDepth = transform.position.y;
     }
 
 	// Use this for initialization
 	void Start () 
     {
-        startDepth = transform.position.y;
         timeStart = Time.time;
 
         GameManager.Tick += UpdateNitrogenLevels;
@@ -48,8 +55,6 @@ public class Diver : MonoBehaviour {
     {
         if (liftingBags >= 1)
         {
-            //interactUI.SetActive(true);
-
             if (readyForTreasure && !_treasure.GetComponent<Treasure>().hasBeenPickedUp) ApplyTreasureBag(_treasure);
         }
     }
@@ -61,6 +66,7 @@ public class Diver : MonoBehaviour {
 
         _treasure.GetComponent<Treasure>().SetLiftBag(tempBag);
         _treasure.GetComponent<BoxCollider2D>().enabled = false;
+        if (bagsUI.transform.GetChild(0).gameObject) Destroy ( bagsUI.transform.GetChild(0).gameObject );
 
         liftingBags -= 1;
     }
@@ -71,13 +77,54 @@ public class Diver : MonoBehaviour {
         cashText.gameObject.GetComponent<Animator>().Play("Cash");
     }
 
+    void LoadUpgrades ()
+    {
+        if (File.Exists(Application.persistentDataPath + "/save.diver"))
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            FileStream file = File.Open(Application.persistentDataPath + "/save.diver", FileMode.Open);
+            save = (SaveFile)bf.Deserialize(file);
+
+            file.Close();
+
+            cashMoney = save.money;
+            print(save.upgrades[0]);
+            nitrogenProduction = 1.0f + (save.upgrades[0] * 25f) / 100; // 5% per upgrade level, make to percentage
+            maxEnergy = maxEnergy + (save.upgrades[2] * 10f);
+            energyGain = energyGain * (1.0f + (save.upgrades[1] * 10f) / 100f);
+            liftingBags = save.upgrades[3];
+            energy = maxEnergy;
+
+            for(int i = 0; i < liftingBags; i++)
+            {
+                GameObject tmpIcon = (GameObject)Instantiate(bagIcon);
+                tmpIcon.transform.SetParent(bagsUI.transform, false);
+            }
+        }
+    }
+
+    void SaveTreasure()
+    {
+        save.money = cashMoney;
+
+        BinaryFormatter bf = new BinaryFormatter();
+        FileStream file = File.Create(Application.persistentDataPath + "/save.diver");
+
+
+        print(save.upgrades[0]);
+
+        bf.Serialize(file, save);
+
+        file.Close();
+    }
+
     void UpdateNitrogenLevels()
     {
-        if (nitrogen > 100f) { print("DEAD AT:" + Time.time); GameManager.gm.GameObver(); }
+        if (nitrogen >= 100f) { GameManager.gm.GameOver(); nitrogen = 0f; }
 
         if (Mathf.Abs(currentDepth) > 1f)
         {
-            nitrogen += Mathf.Abs(currentDepth) / 10;
+            nitrogen += Mathf.Abs(currentDepth) / (20 * nitrogenProduction);
         }
     }
 
@@ -91,7 +138,7 @@ public class Diver : MonoBehaviour {
     {
         // UPDATE VALUES
         currentDepth = transform.position.y - startDepth;
-        timeDiveTotal = Time.time - timeStart;
+        //timeDiveTotal = Time.time - timeStart;
 
         UpdateUI();
 	}
@@ -99,13 +146,15 @@ public class Diver : MonoBehaviour {
     void UpdateUI ()
     {
         depthText.text = Mathf.Abs(Mathf.RoundToInt(currentDepth)).ToString();
-        weightBar.gameObject.GetComponent<StatusBar>().UpdateBar(energy, 100);
+        weightBar.gameObject.GetComponent<StatusBar>().UpdateBar(energy, maxEnergy);
         nitrogenBar.gameObject.GetComponent<StatusBar>().UpdateBar(nitrogen, 100);
-        cashText.text = "$"+cashMoney.ToString();
+        cashText.text = cashMoney.ToString();
     }
 
     void FixedUpdate()
     {
+        if (GameManager.gm.gameOver || GameManager.gm.win) return;
+
         if (GetComponent<Rigidbody2D>().velocity.y < 0f) angle = 0f;
 
         if (Input.GetKey(KeyCode.W))
@@ -136,7 +185,7 @@ public class Diver : MonoBehaviour {
                 angle = 15f;
             }
 
-            if (Input.GetKey(KeyCode.S) && energy >= energyConsumption)
+            if (Input.GetKey(KeyCode.S) && energy >= energyConsumption * Time.deltaTime)
             {
                 GetComponent<Rigidbody2D>().AddForce(new Vector2(0, -energyBoost * Time.deltaTime), ForceMode2D.Impulse);
                 energy -= energyConsumption * Time.deltaTime;
@@ -153,7 +202,7 @@ public class Diver : MonoBehaviour {
         transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 10);
     }
 
-    // DEBUGGING
+    /* DEBUGGING
     void OnGUI ()
     {
         GUILayout.Label("TIME: " + Mathf.RoundToInt(timeDiveTotal).ToString() + "secs");
@@ -168,6 +217,31 @@ public class Diver : MonoBehaviour {
         if (GUILayout.Button("NITROGEN!"))
         {
             nitrogen += 10f;
+        }
+    }*/
+    void GotoMenu ()
+    {
+        Application.LoadLevel("Menu");
+    }
+
+    void OnCollisionEnter2D(Collision2D _collision)
+    {
+        if (_collision != null)
+        {
+            if (_collision.gameObject.tag == "Surface")
+            {
+                SaveTreasure();
+                GameManager.gm.Win(.4f);
+                Invoke("GotoMenu", 5);
+            }
+        }
+    }
+
+    void OnTriggerEnter2D (Collider2D _col)
+    {
+        if (_col.gameObject.name == "Win")
+        {
+            GameManager.gm.Win(.15f);
         }
     }
 }

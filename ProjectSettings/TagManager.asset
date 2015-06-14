@@ -3,7 +3,9 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Surface
+  - Fire
   layers:
   - Default
   - TransparentFX
@@ -49,4 +51,10 @@ TagManager:
     locked: 0
   - name: Fish
     uniqueID: 482708137
+    locked: 0
+  - name: Canyon
+    uniqueID: 543242937
+    locked: 0
+  - name: Overlay
+    uniqueID: 2285293565
     locked: 0
